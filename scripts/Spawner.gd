@@ -6,16 +6,19 @@ signal enemy_shot(pos: Vector2, dir: Vector2, speed: float, is_boss: bool)
 signal wave_started(level: int, alive: int, is_boss_wave: bool, boss_health: int)
 signal wave_state_changed(alive: int, is_boss_wave: bool, boss_health: int)
 signal wave_cleared
+signal powerup_collected(kind: String)
 
 const ARENA_SIZE := Vector2(1280.0, 720.0)
 const WALL_LAYER := 8
 
 var _enemy_scene: PackedScene = preload("res://scenes/Enemy.tscn")
+var _pickup_scene: PackedScene = preload("res://scenes/Pickup.tscn")
 var _rng := RandomNumberGenerator.new()
 
 var _player: CharacterBody2D
 var _wall_container: Node2D
 var _enemy_container: Node2D
+var _pickup_container: Node2D
 var _wall_rects: Array[Rect2] = []
 var _alive_enemies: int = 0
 var _boss_health: int = 0
@@ -26,15 +29,18 @@ func _ready() -> void:
 	_rng.randomize()
 
 
-func setup(player: CharacterBody2D, wall_container: Node2D, enemy_container: Node2D) -> void:
+func setup(player: CharacterBody2D, wall_container: Node2D, enemy_container: Node2D, pickup_container: Node2D) -> void:
 	_player = player
 	_wall_container = wall_container
 	_enemy_container = enemy_container
+	_pickup_container = pickup_container
 
 
 func clear_level() -> void:
 	for enemy in _enemy_container.get_children():
 		enemy.free()
+	for pickup in _pickup_container.get_children():
+		pickup.free()
 	for wall in _wall_container.get_children():
 		wall.free()
 	_wall_rects.clear()
@@ -53,6 +59,8 @@ func generate_level(level: int, player_spawn: Vector2) -> void:
 		var enemy_count: int = mini(2 + level, 9)
 		for _index in range(enemy_count):
 			_spawn_enemy(_find_spawn_point(player_spawn, 220.0), level, false)
+
+	_spawn_pickups(level, player_spawn)
 
 	_emit_wave_started(level)
 
@@ -95,6 +103,46 @@ func _on_enemy_defeated(enemy: CharacterBody2D) -> void:
 	wave_state_changed.emit(_alive_enemies, _is_boss_wave, _boss_health)
 	if _alive_enemies == 0:
 		wave_cleared.emit()
+
+
+func _spawn_pickups(level: int, player_spawn: Vector2) -> void:
+	var pickup_count := 0
+	if level % 2 == 0:
+		pickup_count = 1
+	if level % 4 == 0:
+		pickup_count = 2
+	if _is_boss_wave:
+		pickup_count = 1
+
+	for _index in range(pickup_count):
+		var pickup = _pickup_scene.instantiate()
+		pickup.global_position = _find_spawn_point(player_spawn, 160.0)
+		pickup.pickup_kind = _roll_pickup_type()
+		pickup.picked.connect(_on_pickup_picked)
+		_pickup_container.add_child(pickup)
+
+
+func _roll_pickup_type() -> String:
+	if _player.get_remaining_hits() <= 1 and _rng.randf() < 0.6:
+		return "heal"
+
+	var roll := _rng.randf()
+	if roll < 0.38:
+		return "heal"
+	if roll < 0.7:
+		return "invincible"
+	return "power_gun"
+
+
+func _on_pickup_picked(kind: String, _pickup: Area2D) -> void:
+	match kind:
+		"heal":
+			_player.restore_full_health()
+		"invincible":
+			_player.grant_invincibility(4.5)
+		"power_gun":
+			_player.grant_power_gun(8.0)
+	powerup_collected.emit(kind)
 
 
 func _generate_walls(level: int, player_spawn: Vector2) -> void:

@@ -21,6 +21,8 @@ position = Vector2(640, 360)
 
 [node name="EnemyContainer" type="Node2D" parent="World"]
 
+[node name="PickupContainer" type="Node2D" parent="World"]
+
 [node name="BulletContainer" type="Node2D" parent="World"]
 
 [node name="Spawner" type="Node2D" parent="World"]
@@ -38,42 +40,124 @@ shape = SubResource("CircleShape2D_1")
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 process_mode = 3
 
-[node name="HUD" type="VBoxContainer" parent="CanvasLayer"]
-offset_left = 16.0
-offset_top = 16.0
-offset_right = 460.0
-offset_bottom = 210.0
-theme_override_constants/separation = 6
+[node name="HUD" type="Control" parent="CanvasLayer"]
+process_mode = 3
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
 
-[node name="TitleLabel" type="Label" parent="CanvasLayer/HUD"]
+[node name="TopBar" type="HBoxContainer" parent="CanvasLayer/HUD"]
+offset_left = 14.0
+offset_top = 14.0
+offset_right = 1266.0
+offset_bottom = 138.0
+theme_override_constants/separation = 16
+
+[node name="LeftPanel" type="PanelContainer" parent="CanvasLayer/HUD/TopBar"]
+size_flags_horizontal = 3
+
+[node name="Info" type="VBoxContainer" parent="CanvasLayer/HUD/TopBar/LeftPanel"]
+theme_override_constants/separation = 4
+
+[node name="GameTitleLabel" type="Label" parent="CanvasLayer/HUD/TopBar/LeftPanel/Info"]
 text = "✦ Procedural Arena Shooter ✦"
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 22
+modulate = Color(0.94, 0.95, 1, 1)
 
-[node name="LevelLabel" type="Label" parent="CanvasLayer/HUD"]
+[node name="StatusLabel" type="Label" parent="CanvasLayer/HUD/TopBar/LeftPanel/Info"]
+text = "Clear every enemy to reach the next level."
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 3
+modulate = Color(0.95, 0.82, 0.42, 1)
+
+[node name="CenterPanel" type="PanelContainer" parent="CanvasLayer/HUD/TopBar"]
+custom_minimum_size = Vector2(280, 0)
+
+[node name="Metrics" type="VBoxContainer" parent="CanvasLayer/HUD/TopBar/CenterPanel"]
+theme_override_constants/separation = 3
+
+[node name="LevelLabel" type="Label" parent="CanvasLayer/HUD/TopBar/CenterPanel/Metrics"]
 text = "Level: 1"
-theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 20
 
-[node name="LivesLabel" type="Label" parent="CanvasLayer/HUD"]
+[node name="WaveLabel" type="Label" parent="CanvasLayer/HUD/TopBar/CenterPanel/Metrics"]
+text = "Wave Type: Standard"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 15
+
+[node name="EnemiesLabel" type="Label" parent="CanvasLayer/HUD/TopBar/CenterPanel/Metrics"]
+text = "Enemies Left: 0"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 17
+
+[node name="RightPanel" type="PanelContainer" parent="CanvasLayer/HUD/TopBar"]
+custom_minimum_size = Vector2(220, 0)
+
+[node name="Stats" type="VBoxContainer" parent="CanvasLayer/HUD/TopBar/RightPanel"]
+theme_override_constants/separation = 4
+
+[node name="LivesLabel" type="Label" parent="CanvasLayer/HUD/TopBar/RightPanel/Stats"]
 text = "Hits Left: 3"
 theme_override_font_sizes/font_size = 18
 
-[node name="EnemiesLabel" type="Label" parent="CanvasLayer/HUD"]
-text = "Enemies Left: 0"
-theme_override_font_sizes/font_size = 16
-
-[node name="StatusLabel" type="Label" parent="CanvasLayer/HUD"]
-text = "Clear the wave. Every 5th level is a boss."
+[node name="RunTimeLabel" type="Label" parent="CanvasLayer/HUD/TopBar/RightPanel/Stats"]
+text = "Run Time: 00:00"
 theme_override_font_sizes/font_size = 14
-modulate = Color(0.95, 0.82, 0.42, 1)
+modulate = Color(0.84, 0.9, 1, 1)
 
-[node name="FPSLabel" type="Label" parent="CanvasLayer/HUD"]
+[node name="FPSLabel" type="Label" parent="CanvasLayer/HUD/TopBar/RightPanel/Stats"]
 text = "FPS: 60"
 theme_override_font_sizes/font_size = 14
 
-[node name="HintLabel" type="Label" parent="CanvasLayer/HUD"]
-text = "WASD: Move  |  Space: Shoot  |  Esc: Pause/Resume"
-theme_override_font_sizes/font_size = 12
-modulate = Color(0.75, 0.75, 0.75, 1)
+[node name="BottomHint" type="PanelContainer" parent="CanvasLayer/HUD"]
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -352.0
+offset_top = -46.0
+offset_right = 352.0
+offset_bottom = -10.0
+
+[node name="HintLabel" type="Label" parent="CanvasLayer/HUD/BottomHint"]
+text = "WASD Move   •   Mouse Aim   •   LMB / Space Shoot   •   Esc Pause"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 13
+modulate = Color(0.75, 0.78, 0.84, 1)
+
+[node name="CenterAnnouncement" type="PanelContainer" parent="CanvasLayer/HUD"]
+visible = false
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -290.0
+offset_top = -130.0
+offset_right = 290.0
+offset_bottom = 130.0
+pivot_offset = Vector2(290, 130)
+
+[node name="IntroVBox" type="VBoxContainer" parent="CanvasLayer/HUD/CenterAnnouncement"]
+theme_override_constants/separation = 12
+
+[node name="IntroTitleLabel" type="Label" parent="CanvasLayer/HUD/CenterAnnouncement/IntroVBox"]
+text = "LEVEL 1"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 42
+
+[node name="IntroCountdownLabel" type="Label" parent="CanvasLayer/HUD/CenterAnnouncement/IntroVBox"]
+text = "Starting in 3..."
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 28
+modulate = Color(1, 0.92, 0.52, 1)
+
+[node name="IntroRecapLabel" type="Label" parent="CanvasLayer/HUD/CenterAnnouncement/IntroVBox"]
+text = "New run. Survive the opening wave."
+horizontal_alignment = 1
+autowrap_mode = 3
+theme_override_font_sizes/font_size = 14
+modulate = Color(0.84, 0.9, 1, 1)
 
 [node name="PauseMenu" type="Control" parent="CanvasLayer"]
 visible = false

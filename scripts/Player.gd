@@ -16,6 +16,8 @@ var _can_shoot: bool = true
 var _shoot_timer: float = 0.0
 var _remaining_hits: int = max_hits
 var _invulnerability_timer: float = 0.0
+var _power_gun_timer: float = 0.0
+var _controls_enabled: bool = true
 
 
 func _ready() -> void:
@@ -24,11 +26,13 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	var dir := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	var dir := Vector2.ZERO
+	if _controls_enabled:
+		dir = Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	_update_facing_to_mouse()
 
 	if dir != Vector2.ZERO:
-		_facing = dir.normalized()
-		velocity = _facing * speed
+		velocity = dir.normalized() * speed
 	else:
 		velocity = velocity.move_toward(Vector2.ZERO, speed * 8.0 * delta)
 
@@ -49,18 +53,41 @@ func _physics_process(delta: float) -> void:
 	else:
 		modulate.a = 1.0
 
+	if _power_gun_timer > 0.0:
+		_power_gun_timer -= delta
+
 	queue_redraw()
 
 
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("shoot") and _can_shoot:
+	if not _controls_enabled:
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed and _can_shoot:
+		_fire()
+	elif event.is_action_pressed("shoot") and _can_shoot:
 		_fire()
 
 
+func _update_facing_to_mouse() -> void:
+	var to_mouse := get_global_mouse_position() - global_position
+	if to_mouse.length_squared() > 0.001:
+		_facing = to_mouse.normalized()
+
+
 func _fire() -> void:
+	var cooldown := gun_cooldown_sec
+	if _power_gun_timer > 0.0:
+		cooldown *= 0.55
+
 	_can_shoot = false
-	_shoot_timer = gun_cooldown_sec
-	bullet_fired.emit(global_position + _facing * 26.0, _facing)
+	_shoot_timer = cooldown
+
+	var muzzle := global_position + _facing * 26.0
+	if _power_gun_timer > 0.0:
+		for angle in [-0.16, 0.0, 0.16]:
+			bullet_fired.emit(muzzle, _facing.rotated(angle))
+	else:
+		bullet_fired.emit(muzzle, _facing)
 
 
 func reset_state(spawn_position: Vector2, restore_hits: bool = true) -> void:
@@ -69,6 +96,7 @@ func reset_state(spawn_position: Vector2, restore_hits: bool = true) -> void:
 	_can_shoot = true
 	_shoot_timer = 0.0
 	_invulnerability_timer = 0.0
+	_power_gun_timer = 0.0
 	modulate = Color.WHITE
 	if restore_hits:
 		_remaining_hits = max_hits
@@ -89,6 +117,25 @@ func take_damage(amount: int = 1) -> void:
 
 func get_remaining_hits() -> int:
 	return _remaining_hits
+
+
+func restore_full_health() -> void:
+	_remaining_hits = max_hits
+	hit_taken.emit(_remaining_hits)
+
+
+func grant_invincibility(duration_sec: float) -> void:
+	_invulnerability_timer = max(_invulnerability_timer, duration_sec)
+
+
+func grant_power_gun(duration_sec: float) -> void:
+	_power_gun_timer = max(_power_gun_timer, duration_sec)
+
+
+func set_controls_enabled(enabled: bool) -> void:
+	_controls_enabled = enabled
+	if not _controls_enabled:
+		velocity = Vector2.ZERO
 
 
 func _draw() -> void:

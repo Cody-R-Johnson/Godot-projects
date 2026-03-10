@@ -1,14 +1,6 @@
-# Procedural Arena Shooter (Godot 4) 🎮
+# Procedural Arena Shooter (Godot 4) 
 
-This project has been upgraded from the original orb demo into a playable top-down arena shooter with procedural waves.
-
-## Suggested GitHub Repo Name
-
-- `godot-procedural-arena-shooter`
-
-Alternative options:
-- `godot-wave-survival-prototype`
-- `godot-gameplay-systems-demo`
+Playable top-down arena shooter with procedural waves, enemy AI, and boss encounters.
 
 ## Why This Is a Good Portfolio Piece
 
@@ -28,6 +20,10 @@ This repo demonstrates practical gameplay engineering in Godot:
 - ✅ Shared projectile system (player and enemy bullets)
 - ✅ Wave progression and boss wave every 5 levels
 - ✅ HUD + pause menu (resume/restart/quit)
+- ✅ Procedural power-up pickups (full heal, temporary invincibility, temporary gun upgrade)
+- ✅ Center-screen level intro countdown + previous-wave recap stats
+- ✅ UI polish pass (structured top bar, bottom hint bar, animated wave transitions)
+- ✅ Pickup VFX polish (animated rings, distinct item shapes, collection burst)
 - ✅ Runs on Godot 4.6.x (project originally created on 4.3)
 
 ## Project Structure
@@ -38,27 +34,40 @@ godot/
 ├── scenes/
 │   ├── Main.tscn
 │   ├── Enemy.tscn
-│   └── Bullet.tscn
+│   ├── Bullet.tscn
+│   └── Pickup.tscn
 └── scripts/
     ├── Main.gd      # game loop, HUD, pause, level flow
     ├── Player.gd    # movement, shooting, damage/invuln
     ├── Enemy.gd     # enemy + boss AI and shooting
     ├── Bullet.gd    # projectile movement/collision/draw
-    └── Spawner.gd   # procedural walls and enemy waves
+    ├── Pickup.gd    # collectible power-up behavior
+    └── Spawner.gd   # procedural walls, enemy waves, and pickups
 ```
 
 ## Gameplay (Current)
 
 - Move with **WASD**
-- Shoot with **Space**
+- Aim with the **mouse cursor**
+- Shoot with **Left Click** or **Space**
 - Pause/Resume with **Esc**
 - Player has **3 hits** per run
 - Enemies scale with level
 - Every **5th level** is a **boss wave**
+- Some levels include collectible power-ups:
+    - **Full Heal** (restores hits to max)
+    - **Invincibility** (short temporary shield)
+    - **Gun Upgrade** (temporary triple-shot + faster fire)
+- Between waves, a center-screen intro appears:
+    - **LEVEL X**
+    - **Starting in 3..2..1..GO**
+    - **Previous level recap** (clear time, enemy count, shots fired, hits taken)
 
 ## Technical Notes
 
 - Uses script-driven drawing (`_draw`) for player/enemy/bullet visuals (no sprite art required)
+- Uses script-driven UI animation (`Tween`) for level intro transitions and countdown pulses
+- Uses script-driven pickup VFX (animated rings, icon geometry, burst on collection)
 - Uses collision layers for player, enemies, walls, and bullets
 - Uses signals for decoupled communication between main loop, spawner, enemies, and player
 
@@ -77,6 +86,5 @@ godot/
 ## Next Planned Improvements
 
 - Start menu and run summary screen
-- Power-ups and weapon variations
 - Basic audio pass (SFX + music)
 - Optional score persistence/high-score table
