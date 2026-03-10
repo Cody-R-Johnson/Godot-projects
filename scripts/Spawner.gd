@@ -106,17 +106,28 @@ func _on_enemy_defeated(enemy: CharacterBody2D) -> void:
 
 
 func _spawn_pickups(level: int, player_spawn: Vector2) -> void:
-	var pickup_count := 0
-	if level % 2 == 0:
-		pickup_count = 1
+	var pickup_count := 1
 	if level % 4 == 0:
 		pickup_count = 2
 	if _is_boss_wave:
 		pickup_count = 1
 
-	for _index in range(pickup_count):
+	var placed_points: Array[Vector2] = []
+
+	# Always place one guaranteed pickup in a safe, visible position near the player.
+	var guaranteed_pickup = _pickup_scene.instantiate()
+	var guaranteed_point := _find_guaranteed_pickup_point(player_spawn)
+	placed_points.append(guaranteed_point)
+	guaranteed_pickup.global_position = guaranteed_point
+	guaranteed_pickup.pickup_kind = _roll_pickup_type()
+	guaranteed_pickup.picked.connect(_on_pickup_picked)
+	_pickup_container.add_child(guaranteed_pickup)
+
+	for _index in range(max(pickup_count - 1, 0)):
 		var pickup = _pickup_scene.instantiate()
-		pickup.global_position = _find_spawn_point(player_spawn, 160.0)
+		var spawn_point := _find_pickup_spawn_point(player_spawn, placed_points)
+		placed_points.append(spawn_point)
+		pickup.global_position = spawn_point
 		pickup.pickup_kind = _roll_pickup_type()
 		pickup.picked.connect(_on_pickup_picked)
 		_pickup_container.add_child(pickup)
@@ -143,6 +154,71 @@ func _on_pickup_picked(kind: String, _pickup: Area2D) -> void:
 		"power_gun":
 			_player.grant_power_gun(8.0)
 	powerup_collected.emit(kind)
+
+
+func _find_pickup_spawn_point(player_spawn: Vector2, existing_points: Array[Vector2]) -> Vector2:
+	for _attempt in range(90):
+		var point := Vector2(
+			_rng.randf_range(170.0, ARENA_SIZE.x - 130.0),
+			_rng.randf_range(80.0, ARENA_SIZE.y - 80.0)
+		)
+		if point.distance_to(player_spawn) < 170.0:
+			continue
+		if _point_inside_wall(point, 42.0):
+			continue
+
+		var too_close := false
+		for existing in existing_points:
+			if point.distance_to(existing) < 54.0:
+				too_close = true
+				break
+		if too_close:
+			continue
+
+		return point
+
+	for gx in range(8):
+		for gy in range(4):
+			var grid_point := Vector2(170.0 + gx * 130.0, 90.0 + gy * 140.0)
+			if grid_point.distance_to(player_spawn) < 160.0:
+				continue
+			if _point_inside_wall(grid_point, 40.0):
+				continue
+			var blocked := false
+			for existing in existing_points:
+				if grid_point.distance_to(existing) < 54.0:
+					blocked = true
+					break
+			if not blocked:
+				return grid_point
+
+	for angle_deg in range(0, 360, 30):
+		var fallback := player_spawn + Vector2(230.0, 0.0).rotated(deg_to_rad(float(angle_deg)))
+		fallback.x = clamp(fallback.x, 170.0, ARENA_SIZE.x - 130.0)
+		fallback.y = clamp(fallback.y, 80.0, ARENA_SIZE.y - 80.0)
+		if not _point_inside_wall(fallback, 38.0):
+			return fallback
+
+	return Vector2(ARENA_SIZE.x * 0.5, ARENA_SIZE.y * 0.5)
+
+
+func _find_guaranteed_pickup_point(player_spawn: Vector2) -> Vector2:
+	var candidate_offsets: Array[Vector2] = [
+		Vector2(220.0, 0.0),
+		Vector2(180.0, -120.0),
+		Vector2(180.0, 120.0),
+		Vector2(260.0, -40.0),
+		Vector2(260.0, 40.0),
+	]
+
+	for offset: Vector2 in candidate_offsets:
+		var point: Vector2 = player_spawn + offset
+		point.x = clamp(point.x, 170.0, ARENA_SIZE.x - 130.0)
+		point.y = clamp(point.y, 80.0, ARENA_SIZE.y - 80.0)
+		if not _point_inside_wall(point, 40.0):
+			return point
+
+	return _find_pickup_spawn_point(player_spawn, [])
 
 
 func _generate_walls(level: int, player_spawn: Vector2) -> void:

@@ -12,7 +12,12 @@ var _collect_timer: float = 0.0
 
 
 func _ready() -> void:
+	visible = true
+	scale = Vector2.ONE
+	modulate = Color.WHITE
+	z_index = 30
 	body_entered.connect(_on_body_entered)
+	queue_redraw()
 
 
 func _process(delta: float) -> void:
@@ -90,10 +95,10 @@ func _draw() -> void:
 
 
 func _draw_collect_burst() -> void:
-	var t := clamp(_collect_timer / 0.3, 0.0, 1.0)
-	var burst_radius := lerp(6.0, 34.0, t)
-	var alpha := 1.0 - t
-	var base := Color("#2ecc71")
+	var t: float = clampf(_collect_timer / 0.3, 0.0, 1.0)
+	var burst_radius: float = lerpf(6.0, 34.0, t)
+	var alpha: float = 1.0 - t
+	var base: Color = Color("#2ecc71")
 
 	match pickup_kind:
 		"invincible":
@@ -105,7 +110,7 @@ func _draw_collect_burst() -> void:
 	draw_arc(Vector2.ZERO, burst_radius, 0.0, TAU, 40, Color(base.r, base.g, base.b, 0.95 * alpha), 2.6)
 
 	for idx in range(10):
-		var ang := TAU * float(idx) / 10.0 + _time_alive * 6.0
-		var p1 := Vector2(cos(ang), sin(ang)) * (burst_radius - 7.0)
-		var p2 := Vector2(cos(ang), sin(ang)) * (burst_radius + 5.0)
+		var ang: float = TAU * float(idx) / 10.0 + _time_alive * 6.0
+		var p1: Vector2 = Vector2(cos(ang), sin(ang)) * (burst_radius - 7.0)
+		var p2: Vector2 = Vector2(cos(ang), sin(ang)) * (burst_radius + 5.0)
 		draw_line(p1, p2, Color(1, 1, 1, 0.75 * alpha), 1.8)

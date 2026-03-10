@@ -24,6 +24,11 @@ var _projectile_scene: PackedScene = preload("res://scenes/Bullet.tscn")
 @onready var resume_btn: Button = $CanvasLayer/PauseMenu/Panel/VBox/ResumeButton
 @onready var restart_btn: Button = $CanvasLayer/PauseMenu/Panel/VBox/RestartButton
 @onready var quit_btn: Button = $CanvasLayer/PauseMenu/Panel/VBox/QuitButton
+@onready var game_over_menu: Control = $CanvasLayer/GameOverMenu
+@onready var game_over_label: Label = $CanvasLayer/GameOverMenu/Panel/VBox/GameOverLabel
+@onready var game_over_stats_label: Label = $CanvasLayer/GameOverMenu/Panel/VBox/StatsLabel
+@onready var game_over_retry_btn: Button = $CanvasLayer/GameOverMenu/Panel/VBox/TryAgainButton
+@onready var game_over_quit_btn: Button = $CanvasLayer/GameOverMenu/Panel/VBox/QuitButton
 @onready var player: CharacterBody2D = $Player
 @onready var spawner = $World/Spawner
 @onready var wall_container: Node2D = $World/WallContainer
@@ -44,6 +49,13 @@ var _level_shots_fired: int = 0
 var _level_hits_taken: int = 0
 var _last_reported_hits: int = 0
 var _previous_level_summary: String = "New run. Survive the opening wave."
+var _last_alive_count: int = 0
+var _run_shots_fired: int = 0
+var _run_hits_taken: int = 0
+var _run_pickups_collected: int = 0
+var _run_enemies_defeated: int = 0
+var _run_waves_cleared: int = 0
+var _run_game_over: bool = false
 
 
 func _ready() -> void:
@@ -64,6 +76,8 @@ func _ready() -> void:
 	resume_btn.pressed.connect(_resume)
 	restart_btn.pressed.connect(_restart_run)
 	quit_btn.pressed.connect(get_tree().quit)
+	game_over_retry_btn.pressed.connect(_restart_run)
+	game_over_quit_btn.pressed.connect(get_tree().quit)
 
 	_restart_run()
 	print("✔ Procedural arena shooter ready — Godot %s" % Engine.get_version_info().string)
@@ -80,6 +94,8 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		if _transition_running:
 			return
+		if _run_game_over:
+			return
 		if get_tree().paused:
 			_resume()
 		else:
@@ -89,9 +105,18 @@ func _input(event: InputEvent) -> void:
 func _restart_run() -> void:
 	_level = 1
 	_run_time_seconds = 0.0
+	_run_shots_fired = 0
+	_run_hits_taken = 0
+	_run_pickups_collected = 0
+	_run_enemies_defeated = 0
+	_run_waves_cleared = 0
+	_last_alive_count = 0
+	_run_game_over = false
+	_previous_level_summary = "New run. Survive the opening wave."
 	_clear_projectiles()
 	player.reset_state(PLAYER_SPAWN, true)
 	_resume()
+	game_over_menu.visible = false
 	status_label.text = "Fresh run. Use walls to break line-of-sight."
 	intro_panel.visible = false
 	hint_label.text = "WASD Move   •   Mouse Aim   •   LMB / Space Shoot   •   Esc Pause"
@@ -201,6 +226,8 @@ func _update_run_time_label() -> void:
 
 
 func _pause() -> void:
+	if _run_game_over:
+		return
 	get_tree().paused = true
 	pause_menu.visible = true
 
@@ -213,6 +240,7 @@ func _resume() -> void:
 func _on_player_bullet_fired(pos: Vector2, dir: Vector2) -> void:
 	if _wave_in_progress:
 		_level_shots_fired += 1
+		_run_shots_fired += 1
 	_spawn_projectile(pos, dir, "player", 760.0)
 
 
@@ -222,15 +250,23 @@ func _on_enemy_shot(pos: Vector2, dir: Vector2, speed: float, is_boss: bool) -> 
 
 func _on_player_hit_taken(remaining_hits: int) -> void:
 	if _wave_in_progress and remaining_hits < _last_reported_hits:
-		_level_hits_taken += (_last_reported_hits - remaining_hits)
+		var lost := _last_reported_hits - remaining_hits
+		_level_hits_taken += lost
+		_run_hits_taken += lost
 	_last_reported_hits = remaining_hits
 	lives_label.text = "Hits Left: %d" % remaining_hits
 	status_label.text = "You've been hit. Use the walls for cover."
 
 
 func _on_player_died() -> void:
-	status_label.text = "You were eliminated. Restarting from level 1."
-	_restart_run()
+	_wave_in_progress = false
+	_run_game_over = true
+	player.set_controls_enabled(false)
+	spawner.clear_level()
+	_clear_projectiles()
+	status_label.text = "You were eliminated."
+	hint_label.text = "Review your run stats and choose Try Again or Quit."
+	_show_game_over()
 
 
 func _on_wave_started(level: int, alive: int, is_boss_wave: bool, boss_health: int) -> void:
@@ -244,6 +280,7 @@ func _on_wave_started(level: int, alive: int, is_boss_wave: bool, boss_health: i
 	_level_shots_fired = 0
 	_level_hits_taken = 0
 	_last_reported_hits = player.get_remaining_hits()
+	_last_alive_count = alive
 	if is_boss_wave:
 		status_label.text = "Boss wave. Twenty hits to bring it down."
 	else:
@@ -252,6 +289,9 @@ func _on_wave_started(level: int, alive: int, is_boss_wave: bool, boss_health: i
 
 
 func _on_wave_state_changed(alive: int, is_boss_wave: bool, boss_health: int) -> void:
+	if _wave_in_progress and alive < _last_alive_count:
+		_run_enemies_defeated += (_last_alive_count - alive)
+	_last_alive_count = alive
 	_alive_enemies = alive
 	_is_boss_wave = is_boss_wave
 	_boss_health = boss_health
@@ -260,6 +300,7 @@ func _on_wave_state_changed(alive: int, is_boss_wave: bool, boss_health: int) ->
 
 func _on_wave_cleared() -> void:
 	_capture_previous_level_stats()
+	_run_waves_cleared += 1
 	_wave_in_progress = false
 	_level += 1
 	status_label.text = "Wave cleared. Generating level %d..." % _level
@@ -276,6 +317,7 @@ func _on_powerup_collected(kind: String) -> void:
 			status_label.text = "Weapon upgrade active. Triple-shot enabled."
 		_:
 			status_label.text = "Power-up collected."
+	_run_pickups_collected += 1
 	_update_hud()
 
 
@@ -297,3 +339,17 @@ func _format_seconds(total_seconds: float) -> String:
 	var minutes := total / 60
 	var seconds := total % 60
 	return "%02d:%02d" % [minutes, seconds]
+
+
+func _show_game_over() -> void:
+	game_over_label.text = "GAME OVER"
+	game_over_stats_label.text = "Time Survived: %s\nLevels Cleared: %d\nEnemies Defeated: %d\nShots Fired: %d\nHits Taken: %d\nPower-ups Collected: %d" % [
+		_format_seconds(_run_time_seconds),
+		_run_waves_cleared,
+		_run_enemies_defeated,
+		_run_shots_fired,
+		_run_hits_taken,
+		_run_pickups_collected,
+	]
+	game_over_menu.visible = true
+	get_tree().paused = true
