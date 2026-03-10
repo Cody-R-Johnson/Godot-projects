@@ -10,6 +10,29 @@ signal powerup_collected(kind: String)
 
 const ARENA_SIZE := Vector2(1280.0, 720.0)
 const WALL_LAYER := 8
+const DIFFICULTY_PROFILES := {
+	"easy": {
+		"enemy_count_mult": 0.75,
+		"health_mult": 0.8,
+		"boss_health_mult": 0.8,
+		"speed_mult": 0.9,
+		"fire_interval_mult": 1.2,
+	},
+	"normal": {
+		"enemy_count_mult": 1.0,
+		"health_mult": 1.0,
+		"boss_health_mult": 1.0,
+		"speed_mult": 1.0,
+		"fire_interval_mult": 1.0,
+	},
+	"hard": {
+		"enemy_count_mult": 1.25,
+		"health_mult": 1.25,
+		"boss_health_mult": 1.35,
+		"speed_mult": 1.12,
+		"fire_interval_mult": 0.82,
+	},
+}
 
 var _enemy_scene: PackedScene = preload("res://scenes/Enemy.tscn")
 var _pickup_scene: PackedScene = preload("res://scenes/Pickup.tscn")
@@ -23,6 +46,7 @@ var _wall_rects: Array[Rect2] = []
 var _alive_enemies: int = 0
 var _boss_health: int = 0
 var _is_boss_wave: bool = false
+var _difficulty: String = "normal"
 
 
 func _ready() -> void:
@@ -34,6 +58,13 @@ func setup(player: CharacterBody2D, wall_container: Node2D, enemy_container: Nod
 	_wall_container = wall_container
 	_enemy_container = enemy_container
 	_pickup_container = pickup_container
+
+
+func set_difficulty(mode: String) -> void:
+	if DIFFICULTY_PROFILES.has(mode):
+		_difficulty = mode
+	else:
+		_difficulty = "normal"
 
 
 func clear_level() -> void:
@@ -56,7 +87,9 @@ func generate_level(level: int, player_spawn: Vector2) -> void:
 	if _is_boss_wave:
 		_spawn_enemy(_find_spawn_point(player_spawn, 260.0), level, true)
 	else:
-		var enemy_count: int = mini(2 + level, 9)
+		var base_enemy_count: int = mini(2 + level, 9)
+		var enemy_count_mult: float = _get_difficulty_profile().get("enemy_count_mult", 1.0)
+		var enemy_count: int = maxi(1, int(round(base_enemy_count * enemy_count_mult)))
 		for _index in range(enemy_count):
 			_spawn_enemy(_find_spawn_point(player_spawn, 220.0), level, false)
 
@@ -77,7 +110,7 @@ func _spawn_enemy(spawn_point: Vector2, level: int, is_boss: bool) -> void:
 	var enemy = _enemy_scene.instantiate()
 	enemy.global_position = spawn_point
 	_enemy_container.add_child(enemy)
-	enemy.setup(_player, is_boss, level)
+	enemy.setup(_player, is_boss, level, _get_difficulty_profile())
 	enemy.shoot_requested.connect(_on_enemy_shoot_requested)
 	enemy.health_changed.connect(_on_enemy_health_changed)
 	enemy.defeated.connect(_on_enemy_defeated)
@@ -154,6 +187,12 @@ func _on_pickup_picked(kind: String, _pickup: Area2D) -> void:
 		"power_gun":
 			_player.grant_power_gun(8.0)
 	powerup_collected.emit(kind)
+
+
+func _get_difficulty_profile() -> Dictionary:
+	if DIFFICULTY_PROFILES.has(_difficulty):
+		return DIFFICULTY_PROFILES[_difficulty]
+	return DIFFICULTY_PROFILES["normal"]
 
 
 func _find_pickup_spawn_point(player_spawn: Vector2, existing_points: Array[Vector2]) -> Vector2:

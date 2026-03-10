@@ -16,6 +16,7 @@ enabled = true
 position = Vector2(640, 360)
 
 [node name="World" type="Node2D" parent="."]
+process_mode = 1
 
 [node name="WallContainer" type="Node2D" parent="World"]
 
@@ -30,6 +31,7 @@ script = ExtResource("2_spawner")
 
 [node name="Player" type="CharacterBody2D" parent="."]
 position = Vector2(96, 360)
+process_mode = 1
 collision_layer = 1
 collision_mask = 8
 script = ExtResource("3_player")
@@ -158,6 +160,74 @@ horizontal_alignment = 1
 autowrap_mode = 3
 theme_override_font_sizes/font_size = 14
 modulate = Color(0.84, 0.9, 1, 1)
+
+[node name="MainMenu" type="Control" parent="CanvasLayer"]
+process_mode = 3
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Bg" type="ColorRect" parent="CanvasLayer/MainMenu"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.02, 0.03, 0.06, 0.94)
+
+[node name="Panel" type="PanelContainer" parent="CanvasLayer/MainMenu"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -290.0
+offset_top = -215.0
+offset_right = 290.0
+offset_bottom = 215.0
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/MainMenu/Panel"]
+theme_override_constants/separation = 12
+
+[node name="TitleLabel" type="Label" parent="CanvasLayer/MainMenu/Panel/VBox"]
+text = "✦ PROCEDURAL ARENA SHOOTER ✦"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 30
+
+[node name="SubtitleLabel" type="Label" parent="CanvasLayer/MainMenu/Panel/VBox"]
+text = "Pick your difficulty and start the run"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 15
+modulate = Color(0.82, 0.87, 0.97, 1)
+
+[node name="DifficultyRow" type="HBoxContainer" parent="CanvasLayer/MainMenu/Panel/VBox"]
+alignment = 1
+theme_override_constants/separation = 10
+
+[node name="DifficultyLabel" type="Label" parent="CanvasLayer/MainMenu/Panel/VBox/DifficultyRow"]
+text = "Difficulty"
+theme_override_font_sizes/font_size = 18
+
+[node name="DifficultyOption" type="OptionButton" parent="CanvasLayer/MainMenu/Panel/VBox/DifficultyRow"]
+custom_minimum_size = Vector2(160, 0)
+theme_override_font_sizes/font_size = 16
+
+[node name="StartGameButton" type="Button" parent="CanvasLayer/MainMenu/Panel/VBox"]
+text = "▶  Start Game"
+theme_override_font_sizes/font_size = 22
+
+[node name="PowerupHeader" type="Label" parent="CanvasLayer/MainMenu/Panel/VBox"]
+text = "Power-ups"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 20
+modulate = Color(1, 0.92, 0.56, 1)
+
+[node name="PowerupInfo" type="Label" parent="CanvasLayer/MainMenu/Panel/VBox"]
+text = "• Full Heal: restores your hits to max\n• Invincibility: temporary shield against damage\n• Gun Upgrade: temporary triple-shot + faster fire"
+horizontal_alignment = 1
+autowrap_mode = 3
+theme_override_font_sizes/font_size = 14
+modulate = Color(0.85, 0.92, 0.97, 1)
+
+[node name="MenuQuitButton" type="Button" parent="CanvasLayer/MainMenu/Panel/VBox"]
+text = "✕  Quit"
+theme_override_font_sizes/font_size = 18
 
 [node name="GameOverMenu" type="Control" parent="CanvasLayer"]
 visible = false

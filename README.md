@@ -24,6 +24,7 @@ This repo demonstrates practical gameplay engineering in Godot:
 - ✅ Center-screen level intro countdown + previous-wave recap stats
 - ✅ UI polish pass (structured top bar, bottom hint bar, animated wave transitions)
 - ✅ Pickup VFX polish (animated rings, distinct item shapes, collection burst)
+- ✅ Main menu with start flow, difficulty selection (Easy/Normal/Hard), and power-up guide
 - ✅ Runs on Godot 4.6.x (project originally created on 4.3)
 
 ## Project Structure
@@ -51,6 +52,7 @@ godot/
 - Aim with the **mouse cursor**
 - Shoot with **Left Click** or **Space**
 - Pause/Resume with **Esc**
+- Choose **Easy / Normal / Hard** from the main menu before starting a run
 - Player has **3 hits** per run
 - Enemies scale with level
 - Every **5th level** is a **boss wave**

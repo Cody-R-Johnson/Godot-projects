@@ -3,6 +3,7 @@ extends Node2D
 ## Main.gd — Runs the procedural arena loop, pause UI, player resets, and projectiles.
 
 @export var background_color: Color = Color(0.07, 0.07, 0.12)
+@export_enum("easy", "normal", "hard") var difficulty: String = "normal"
 
 const PLAYER_SPAWN := Vector2(96.0, 360.0)
 
@@ -20,6 +21,11 @@ var _projectile_scene: PackedScene = preload("res://scenes/Bullet.tscn")
 @onready var intro_title_label: Label = $CanvasLayer/HUD/CenterAnnouncement/IntroVBox/IntroTitleLabel
 @onready var intro_countdown_label: Label = $CanvasLayer/HUD/CenterAnnouncement/IntroVBox/IntroCountdownLabel
 @onready var intro_recap_label: Label = $CanvasLayer/HUD/CenterAnnouncement/IntroVBox/IntroRecapLabel
+@onready var hud_root: Control = $CanvasLayer/HUD
+@onready var main_menu: Control = $CanvasLayer/MainMenu
+@onready var start_game_btn: Button = $CanvasLayer/MainMenu/Panel/VBox/StartGameButton
+@onready var difficulty_option: OptionButton = $CanvasLayer/MainMenu/Panel/VBox/DifficultyRow/DifficultyOption
+@onready var menu_quit_btn: Button = $CanvasLayer/MainMenu/Panel/VBox/MenuQuitButton
 @onready var pause_menu: Control = $CanvasLayer/PauseMenu
 @onready var resume_btn: Button = $CanvasLayer/PauseMenu/Panel/VBox/ResumeButton
 @onready var restart_btn: Button = $CanvasLayer/PauseMenu/Panel/VBox/RestartButton
@@ -56,6 +62,7 @@ var _run_pickups_collected: int = 0
 var _run_enemies_defeated: int = 0
 var _run_waves_cleared: int = 0
 var _run_game_over: bool = false
+var _run_started: bool = false
 
 
 func _ready() -> void:
@@ -63,6 +70,8 @@ func _ready() -> void:
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
 	spawner.setup(player, wall_container, enemy_container, pickup_container)
+	spawner.set_difficulty(difficulty)
+	_setup_difficulty_option()
 	spawner.enemy_shot.connect(_on_enemy_shot)
 	spawner.wave_started.connect(_on_wave_started)
 	spawner.wave_state_changed.connect(_on_wave_state_changed)
@@ -78,19 +87,24 @@ func _ready() -> void:
 	quit_btn.pressed.connect(get_tree().quit)
 	game_over_retry_btn.pressed.connect(_restart_run)
 	game_over_quit_btn.pressed.connect(get_tree().quit)
+	start_game_btn.pressed.connect(_on_start_game_pressed)
+	difficulty_option.item_selected.connect(_on_difficulty_selected)
+	menu_quit_btn.pressed.connect(get_tree().quit)
 
-	_restart_run()
+	_show_main_menu()
 	print("✔ Procedural arena shooter ready — Godot %s" % Engine.get_version_info().string)
 
 
 func _process(delta: float) -> void:
-	if not get_tree().paused:
+	if _run_started and not get_tree().paused:
 		_run_time_seconds += delta
 		_update_run_time_label()
 	fps_label.text = "FPS: %d" % Engine.get_frames_per_second()
 
 
 func _input(event: InputEvent) -> void:
+	if main_menu.visible:
+		return
 	if event.is_action_pressed("ui_cancel"):
 		if _transition_running:
 			return
@@ -103,6 +117,7 @@ func _input(event: InputEvent) -> void:
 
 
 func _restart_run() -> void:
+	_run_started = true
 	_level = 1
 	_run_time_seconds = 0.0
 	_run_shots_fired = 0
@@ -117,12 +132,58 @@ func _restart_run() -> void:
 	player.reset_state(PLAYER_SPAWN, true)
 	_resume()
 	game_over_menu.visible = false
+	main_menu.visible = false
+	hud_root.visible = true
 	status_label.text = "Fresh run. Use walls to break line-of-sight."
+	hint_label.text = "Difficulty: %s   •   WASD Move   •   Mouse Aim   •   LMB / Space Shoot   •   Esc Pause" % difficulty.capitalize()
 	intro_panel.visible = false
-	hint_label.text = "WASD Move   •   Mouse Aim   •   LMB / Space Shoot   •   Esc Pause"
 	spawner.clear_level()
 	_begin_level_transition(true)
 	_update_hud()
+
+
+func _show_main_menu() -> void:
+	_run_started = false
+	main_menu.visible = true
+	hud_root.visible = false
+	pause_menu.visible = false
+	game_over_menu.visible = false
+	intro_panel.visible = false
+	spawner.clear_level()
+	_clear_projectiles()
+	player.set_controls_enabled(false)
+	get_tree().paused = false
+
+
+func _setup_difficulty_option() -> void:
+	difficulty_option.clear()
+	difficulty_option.add_item("Easy")
+	difficulty_option.add_item("Normal")
+	difficulty_option.add_item("Hard")
+	var selected := 1
+	match difficulty:
+		"easy":
+			selected = 0
+		"hard":
+			selected = 2
+	difficulty_option.select(selected)
+
+
+func _on_start_game_pressed() -> void:
+	_restart_run()
+
+
+func _on_difficulty_selected(index: int) -> void:
+	match index:
+		0:
+			difficulty = "easy"
+		1:
+			difficulty = "normal"
+		2:
+			difficulty = "hard"
+		_:
+			difficulty = "normal"
+	spawner.set_difficulty(difficulty)
 
 
 func _start_next_level() -> void:

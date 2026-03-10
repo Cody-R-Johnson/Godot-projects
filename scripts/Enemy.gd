@@ -27,23 +27,29 @@ func _ready() -> void:
 	add_to_group("enemy")
 
 
-func setup(target: CharacterBody2D, boss_mode: bool, level: int) -> void:
+func setup(target: CharacterBody2D, boss_mode: bool, level: int, difficulty_profile: Dictionary = {}) -> void:
 	_target = target
 	_is_boss = boss_mode
 	_strafe_sign = -1.0 if randi() % 2 == 0 else 1.0
 
+	var health_mult: float = difficulty_profile.get("health_mult", 1.0)
+	var boss_health_mult: float = difficulty_profile.get("boss_health_mult", 1.0)
+	var speed_mult: float = difficulty_profile.get("speed_mult", 1.0)
+	var fire_interval_mult: float = difficulty_profile.get("fire_interval_mult", 1.0)
+
 	if _is_boss:
-		_max_health = 20
-		_health = 20
-		move_speed = 92.0 + level * 1.6
-		fire_interval = 0.65
+		_max_health = maxi(8, int(round(20.0 * boss_health_mult)))
+		_health = _max_health
+		move_speed = (92.0 + level * 1.6) * speed_mult
+		fire_interval = 0.65 * fire_interval_mult
 		desired_distance = 320.0
 		_radius = 30.0
 	else:
-		_max_health = 2 + int(level / 3)
+		var base_health: int = 2 + int(level / 3)
+		_max_health = maxi(1, int(round(base_health * health_mult)))
 		_health = _max_health
-		move_speed = 105.0 + level * 4.0
-		fire_interval = max(0.72, 1.5 - level * 0.05)
+		move_speed = (105.0 + level * 4.0) * speed_mult
+		fire_interval = max(0.52, (1.5 - level * 0.05) * fire_interval_mult)
 		desired_distance = 220.0 + float(level % 3) * 18.0
 		_radius = 16.0
 
@@ -82,6 +88,10 @@ func _physics_process(delta: float) -> void:
 		velocity = velocity.move_toward(Vector2.ZERO, move_speed * delta)
 
 	move_and_slide()
+
+	var vp := get_viewport_rect().size
+	position.x = clamp(position.x, _radius + 2.0, vp.x - (_radius + 2.0))
+	position.y = clamp(position.y, _radius + 2.0, vp.y - (_radius + 2.0))
 
 	_shoot_timer -= delta
 	if _shoot_timer <= 0.0 and _has_line_of_sight():
