@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="#478cbf"/>
+  <!-- Godot-style robot head (simplified) -->
+  <ellipse cx="64" cy="58" rx="28" ry="30" fill="#fff"/>
+  <circle cx="54" cy="54" r="7" fill="#478cbf"/>
+  <circle cx="74" cy="54" r="7" fill="#478cbf"/>
+  <circle cx="54" cy="54" r="3" fill="#fff"/>
+  <circle cx="74" cy="54" r="3" fill="#fff"/>
+  <rect x="50" y="70" width="28" height="5" rx="2.5" fill="#478cbf"/>
+</svg>

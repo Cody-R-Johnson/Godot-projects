@@ -1,0 +1,8 @@
+# Godot 4+ cache/editor data
+.godot/
+
+# Export presets (optional local machine file)
+export_presets.cfg
+
+# macOS
+.DS_Store
