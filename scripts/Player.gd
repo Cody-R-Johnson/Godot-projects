@@ -18,10 +18,16 @@ var _remaining_hits: int = max_hits
 var _invulnerability_timer: float = 0.0
 var _power_gun_timer: float = 0.0
 var _controls_enabled: bool = true
+var _base_speed: float = 0.0
+var _base_gun_cooldown: float = 0.0
+var _base_max_hits: int = 3
 
 
 func _ready() -> void:
 	add_to_group("player")
+	_base_speed = speed
+	_base_gun_cooldown = gun_cooldown_sec
+	_base_max_hits = max_hits
 	_remaining_hits = max_hits
 
 
@@ -130,6 +136,38 @@ func grant_invincibility(duration_sec: float) -> void:
 
 func grant_power_gun(duration_sec: float) -> void:
 	_power_gun_timer = max(_power_gun_timer, duration_sec)
+
+
+func get_invincibility_remaining() -> float:
+	return max(_invulnerability_timer, 0.0)
+
+
+func get_power_gun_remaining() -> float:
+	return max(_power_gun_timer, 0.0)
+
+
+func apply_level_reward(reward: String) -> String:
+	match reward:
+		"mobility":
+			speed += 24.0
+			return "Reward: Mobility Boost (+move speed)"
+		"trigger":
+			gun_cooldown_sec = max(0.08, gun_cooldown_sec * 0.9)
+			return "Reward: Trigger Tuning (+fire rate)"
+		"fortify":
+			max_hits += 1
+			_remaining_hits = min(_remaining_hits + 1, max_hits)
+			hit_taken.emit(_remaining_hits)
+			return "Reward: Fortify (+1 max hit)"
+		_:
+			return "Reward acquired"
+
+
+func reset_run_upgrades() -> void:
+	speed = _base_speed
+	gun_cooldown_sec = _base_gun_cooldown
+	max_hits = _base_max_hits
+	_remaining_hits = min(_remaining_hits, max_hits)
 
 
 func set_controls_enabled(enabled: bool) -> void:

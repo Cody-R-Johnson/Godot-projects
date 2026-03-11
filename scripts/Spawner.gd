@@ -2,7 +2,7 @@ extends Node2D
 
 ## Spawner.gd — Procedural level director for walls, enemies, and boss waves.
 
-signal enemy_shot(pos: Vector2, dir: Vector2, speed: float, is_boss: bool)
+signal enemy_shot(pos: Vector2, dir: Vector2, speed: float, is_boss: bool, damage: int, shot_style: String)
 signal wave_started(level: int, alive: int, is_boss_wave: bool, boss_health: int)
 signal wave_state_changed(alive: int, is_boss_wave: bool, boss_health: int)
 signal wave_cleared
@@ -90,8 +90,9 @@ func generate_level(level: int, player_spawn: Vector2) -> void:
 		var base_enemy_count: int = mini(2 + level, 9)
 		var enemy_count_mult: float = _get_difficulty_profile().get("enemy_count_mult", 1.0)
 		var enemy_count: int = maxi(1, int(round(base_enemy_count * enemy_count_mult)))
-		for _index in range(enemy_count):
-			_spawn_enemy(_find_spawn_point(player_spawn, 220.0), level, false)
+		for index in range(enemy_count):
+			var enemy_type := _roll_enemy_type(level, index, enemy_count)
+			_spawn_enemy(_find_spawn_point(player_spawn, 220.0), level, false, enemy_type)
 
 	_spawn_pickups(level, player_spawn)
 
@@ -106,11 +107,11 @@ func _emit_wave_started(level: int) -> void:
 	wave_state_changed.emit(_alive_enemies, _is_boss_wave, _boss_health)
 
 
-func _spawn_enemy(spawn_point: Vector2, level: int, is_boss: bool) -> void:
+func _spawn_enemy(spawn_point: Vector2, level: int, is_boss: bool, enemy_type: String = "standard") -> void:
 	var enemy = _enemy_scene.instantiate()
 	enemy.global_position = spawn_point
 	_enemy_container.add_child(enemy)
-	enemy.setup(_player, is_boss, level, _get_difficulty_profile())
+	enemy.setup(_player, is_boss, level, _get_difficulty_profile(), enemy_type)
 	enemy.shoot_requested.connect(_on_enemy_shoot_requested)
 	enemy.health_changed.connect(_on_enemy_health_changed)
 	enemy.defeated.connect(_on_enemy_defeated)
@@ -119,8 +120,8 @@ func _spawn_enemy(spawn_point: Vector2, level: int, is_boss: bool) -> void:
 		_boss_health = enemy.get_health()
 
 
-func _on_enemy_shoot_requested(pos: Vector2, dir: Vector2, speed: float, is_boss: bool) -> void:
-	enemy_shot.emit(pos, dir, speed, is_boss)
+func _on_enemy_shoot_requested(pos: Vector2, dir: Vector2, speed: float, is_boss: bool, damage: int, shot_style: String) -> void:
+	enemy_shot.emit(pos, dir, speed, is_boss, damage, shot_style)
 
 
 func _on_enemy_health_changed(current_health: int, _max_health: int, is_boss: bool) -> void:
@@ -193,6 +194,20 @@ func _get_difficulty_profile() -> Dictionary:
 	if DIFFICULTY_PROFILES.has(_difficulty):
 		return DIFFICULTY_PROFILES[_difficulty]
 	return DIFFICULTY_PROFILES["normal"]
+
+
+func _roll_enemy_type(level: int, index: int, enemy_count: int) -> String:
+	if level >= 7 and index == enemy_count - 1:
+		if _rng.randf() < 0.5:
+			return "rpg"
+		return "sniper"
+
+	var roll := _rng.randf()
+	if level >= 5 and roll < 0.2:
+		return "rpg"
+	if level >= 3 and roll < 0.48:
+		return "sniper"
+	return "standard"
 
 
 func _find_pickup_spawn_point(player_spawn: Vector2, existing_points: Array[Vector2]) -> Vector2:

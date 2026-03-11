@@ -10,18 +10,20 @@ var _speed: float = 680.0
 var _damage: int = 1
 var _team: String = "player"
 var _is_boss_shot: bool = false
+var _shot_style: String = ""
 
 
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 
 
-func init(dir: Vector2, team: String, speed: float = 680.0, damage: int = 1, is_boss_shot: bool = false) -> void:
+func init(dir: Vector2, team: String, speed: float = 680.0, damage: int = 1, is_boss_shot: bool = false, shot_style: String = "") -> void:
 	_dir = dir.normalized()
 	_team = team
 	_speed = speed
 	_damage = damage
 	_is_boss_shot = is_boss_shot
+	_shot_style = shot_style
 
 	if _team == "player":
 		collision_layer = 4
@@ -73,6 +75,16 @@ func _draw() -> void:
 		shell = Color("#c56cf0")
 		core = Color("#f8e7ff")
 		radius = 6.0
+	elif _shot_style == "enemy_sniper":
+		glow = Color(0.2, 0.85, 1.0, 0.35)
+		shell = Color("#39d4f5")
+		core = Color("#e8fcff")
+		radius = 4.0
+	elif _shot_style == "enemy_rpg":
+		glow = Color(1.0, 0.56, 0.12, 0.45)
+		shell = Color("#ff8f1f")
+		core = Color("#fff2d6")
+		radius = 7.2
 
 	draw_circle(Vector2.ZERO, radius * 1.2, glow)
 	draw_circle(Vector2.ZERO, radius, shell)

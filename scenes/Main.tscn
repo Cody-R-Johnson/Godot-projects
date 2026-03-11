@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3 uid="uid://demo_main"]
+[gd_scene load_steps=6 format=3 uid="uid://demo_main"]
 
 [ext_resource type="Script" path="res://scripts/Main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/Spawner.gd" id="2_spawner"]
 [ext_resource type="Script" path="res://scripts/Player.gd" id="3_player"]
+[ext_resource type="Script" path="res://scripts/PowerupIcon.gd" id="4_powerup_icon"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_1"]
 radius = 16.0
@@ -108,6 +109,12 @@ text = "Run Time: 00:00"
 theme_override_font_sizes/font_size = 14
 modulate = Color(0.84, 0.9, 1, 1)
 
+[node name="BuffLabel" type="Label" parent="CanvasLayer/HUD/TopBar/RightPanel/Stats"]
+text = "Buffs: None"
+theme_override_font_sizes/font_size = 13
+autowrap_mode = 3
+modulate = Color(0.76, 0.97, 0.83, 1)
+
 [node name="FPSLabel" type="Label" parent="CanvasLayer/HUD/TopBar/RightPanel/Stats"]
 text = "FPS: 60"
 theme_override_font_sizes/font_size = 14
@@ -160,6 +167,18 @@ horizontal_alignment = 1
 autowrap_mode = 3
 theme_override_font_sizes/font_size = 14
 modulate = Color(0.84, 0.9, 1, 1)
+
+[node name="FloatTextLayer" type="Control" parent="CanvasLayer/HUD"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="HitFlash" type="ColorRect" parent="CanvasLayer"]
+visible = false
+process_mode = 3
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(1, 0.2, 0.2, 0.18)
 
 [node name="MainMenu" type="Control" parent="CanvasLayer"]
 process_mode = 3
@@ -218,16 +237,106 @@ horizontal_alignment = 1
 theme_override_font_sizes/font_size = 20
 modulate = Color(1, 0.92, 0.56, 1)
 
-[node name="PowerupInfo" type="Label" parent="CanvasLayer/MainMenu/Panel/VBox"]
-text = "• Full Heal: restores your hits to max\n• Invincibility: temporary shield against damage\n• Gun Upgrade: temporary triple-shot + faster fire"
-horizontal_alignment = 1
-autowrap_mode = 3
+[node name="PowerupRows" type="VBoxContainer" parent="CanvasLayer/MainMenu/Panel/VBox"]
+theme_override_constants/separation = 6
+
+[node name="HealRow" type="HBoxContainer" parent="CanvasLayer/MainMenu/Panel/VBox/PowerupRows"]
+theme_override_constants/separation = 8
+
+[node name="HealIcon" type="Control" parent="CanvasLayer/MainMenu/Panel/VBox/PowerupRows/HealRow"]
+custom_minimum_size = Vector2(26, 26)
+script = ExtResource("4_powerup_icon")
+icon_kind = "heal"
+
+[node name="HealText" type="Label" parent="CanvasLayer/MainMenu/Panel/VBox/PowerupRows/HealRow"]
+text = "Full Heal — restores your hits to max"
+theme_override_font_sizes/font_size = 14
+modulate = Color(0.85, 0.92, 0.97, 1)
+
+[node name="InvincibleRow" type="HBoxContainer" parent="CanvasLayer/MainMenu/Panel/VBox/PowerupRows"]
+theme_override_constants/separation = 8
+
+[node name="InvincibleIcon" type="Control" parent="CanvasLayer/MainMenu/Panel/VBox/PowerupRows/InvincibleRow"]
+custom_minimum_size = Vector2(26, 26)
+script = ExtResource("4_powerup_icon")
+icon_kind = "invincible"
+
+[node name="InvincibleText" type="Label" parent="CanvasLayer/MainMenu/Panel/VBox/PowerupRows/InvincibleRow"]
+text = "Invincibility — temporary shield against damage"
+theme_override_font_sizes/font_size = 14
+modulate = Color(0.85, 0.92, 0.97, 1)
+
+[node name="PowerGunRow" type="HBoxContainer" parent="CanvasLayer/MainMenu/Panel/VBox/PowerupRows"]
+theme_override_constants/separation = 8
+
+[node name="PowerGunIcon" type="Control" parent="CanvasLayer/MainMenu/Panel/VBox/PowerupRows/PowerGunRow"]
+custom_minimum_size = Vector2(26, 26)
+script = ExtResource("4_powerup_icon")
+icon_kind = "power_gun"
+
+[node name="PowerGunText" type="Label" parent="CanvasLayer/MainMenu/Panel/VBox/PowerupRows/PowerGunRow"]
+text = "Gun Upgrade — temporary triple-shot + faster fire"
 theme_override_font_sizes/font_size = 14
 modulate = Color(0.85, 0.92, 0.97, 1)
 
 [node name="MenuQuitButton" type="Button" parent="CanvasLayer/MainMenu/Panel/VBox"]
 text = "✕  Quit"
 theme_override_font_sizes/font_size = 18
+
+[node name="LevelUpMenu" type="Control" parent="CanvasLayer"]
+visible = false
+process_mode = 3
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Bg" type="ColorRect" parent="CanvasLayer/LevelUpMenu"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.03, 0.03, 0.08, 0.86)
+
+[node name="Panel" type="PanelContainer" parent="CanvasLayer/LevelUpMenu"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -255.0
+offset_top = -170.0
+offset_right = 255.0
+offset_bottom = 170.0
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/LevelUpMenu/Panel"]
+theme_override_constants/separation = 10
+
+[node name="LevelUpTitle" type="Label" parent="CanvasLayer/LevelUpMenu/Panel/VBox"]
+text = "LEVEL COMPLETE"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 34
+modulate = Color(1, 0.91, 0.56, 1)
+
+[node name="RewardInfo" type="Label" parent="CanvasLayer/LevelUpMenu/Panel/VBox"]
+text = "Choose one reward for the next wave"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 15
+modulate = Color(0.84, 0.9, 1, 1)
+
+[node name="Choices" type="VBoxContainer" parent="CanvasLayer/LevelUpMenu/Panel/VBox"]
+theme_override_constants/separation = 8
+
+[node name="MobilityButton" type="Button" parent="CanvasLayer/LevelUpMenu/Panel/VBox/Choices"]
+text = "⚡  Mobility Boost  (+move speed)"
+theme_override_font_sizes/font_size = 18
+modulate = Color(0.65, 0.9, 1, 1)
+
+[node name="TriggerButton" type="Button" parent="CanvasLayer/LevelUpMenu/Panel/VBox/Choices"]
+text = "🔥  Trigger Tuning  (+fire rate)"
+theme_override_font_sizes/font_size = 18
+modulate = Color(1, 0.82, 0.56, 1)
+
+[node name="FortifyButton" type="Button" parent="CanvasLayer/LevelUpMenu/Panel/VBox/Choices"]
+text = "🛡  Fortify  (+1 max hit)"
+theme_override_font_sizes/font_size = 18
+modulate = Color(0.75, 1, 0.76, 1)
 
 [node name="GameOverMenu" type="Control" parent="CanvasLayer"]
 visible = false

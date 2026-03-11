@@ -2,6 +2,8 @@ extends Node2D
 
 ## Main.gd — Runs the procedural arena loop, pause UI, player resets, and projectiles.
 
+signal level_reward_selected(reward: String)
+
 @export var background_color: Color = Color(0.07, 0.07, 0.12)
 @export_enum("easy", "normal", "hard") var difficulty: String = "normal"
 
@@ -14,6 +16,7 @@ var _projectile_scene: PackedScene = preload("res://scenes/Bullet.tscn")
 @onready var enemies_label: Label = $CanvasLayer/HUD/TopBar/CenterPanel/Metrics/EnemiesLabel
 @onready var lives_label: Label = $CanvasLayer/HUD/TopBar/RightPanel/Stats/LivesLabel
 @onready var run_time_label: Label = $CanvasLayer/HUD/TopBar/RightPanel/Stats/RunTimeLabel
+@onready var buff_label: Label = $CanvasLayer/HUD/TopBar/RightPanel/Stats/BuffLabel
 @onready var fps_label: Label = $CanvasLayer/HUD/TopBar/RightPanel/Stats/FPSLabel
 @onready var status_label: Label = $CanvasLayer/HUD/TopBar/LeftPanel/Info/StatusLabel
 @onready var hint_label: Label = $CanvasLayer/HUD/BottomHint/HintLabel
@@ -22,6 +25,7 @@ var _projectile_scene: PackedScene = preload("res://scenes/Bullet.tscn")
 @onready var intro_countdown_label: Label = $CanvasLayer/HUD/CenterAnnouncement/IntroVBox/IntroCountdownLabel
 @onready var intro_recap_label: Label = $CanvasLayer/HUD/CenterAnnouncement/IntroVBox/IntroRecapLabel
 @onready var hud_root: Control = $CanvasLayer/HUD
+@onready var float_text_layer: Control = $CanvasLayer/HUD/FloatTextLayer
 @onready var main_menu: Control = $CanvasLayer/MainMenu
 @onready var start_game_btn: Button = $CanvasLayer/MainMenu/Panel/VBox/StartGameButton
 @onready var difficulty_option: OptionButton = $CanvasLayer/MainMenu/Panel/VBox/DifficultyRow/DifficultyOption
@@ -35,6 +39,14 @@ var _projectile_scene: PackedScene = preload("res://scenes/Bullet.tscn")
 @onready var game_over_stats_label: Label = $CanvasLayer/GameOverMenu/Panel/VBox/StatsLabel
 @onready var game_over_retry_btn: Button = $CanvasLayer/GameOverMenu/Panel/VBox/TryAgainButton
 @onready var game_over_quit_btn: Button = $CanvasLayer/GameOverMenu/Panel/VBox/QuitButton
+@onready var level_up_menu: Control = $CanvasLayer/LevelUpMenu
+@onready var level_up_title: Label = $CanvasLayer/LevelUpMenu/Panel/VBox/LevelUpTitle
+@onready var reward_info: Label = $CanvasLayer/LevelUpMenu/Panel/VBox/RewardInfo
+@onready var reward_mobility_btn: Button = $CanvasLayer/LevelUpMenu/Panel/VBox/Choices/MobilityButton
+@onready var reward_trigger_btn: Button = $CanvasLayer/LevelUpMenu/Panel/VBox/Choices/TriggerButton
+@onready var reward_fortify_btn: Button = $CanvasLayer/LevelUpMenu/Panel/VBox/Choices/FortifyButton
+@onready var hit_flash: ColorRect = $CanvasLayer/HitFlash
+@onready var camera: Camera2D = $Camera2D
 @onready var player: CharacterBody2D = $Player
 @onready var spawner = $World/Spawner
 @onready var wall_container: Node2D = $World/WallContainer
@@ -63,6 +75,8 @@ var _run_enemies_defeated: int = 0
 var _run_waves_cleared: int = 0
 var _run_game_over: bool = false
 var _run_started: bool = false
+var _shake_strength: float = 0.0
+var _slowmo_running: bool = false
 
 
 func _ready() -> void:
@@ -87,6 +101,9 @@ func _ready() -> void:
 	quit_btn.pressed.connect(get_tree().quit)
 	game_over_retry_btn.pressed.connect(_restart_run)
 	game_over_quit_btn.pressed.connect(get_tree().quit)
+	reward_mobility_btn.pressed.connect(func() -> void: _choose_level_reward("mobility"))
+	reward_trigger_btn.pressed.connect(func() -> void: _choose_level_reward("trigger"))
+	reward_fortify_btn.pressed.connect(func() -> void: _choose_level_reward("fortify"))
 	start_game_btn.pressed.connect(_on_start_game_pressed)
 	difficulty_option.item_selected.connect(_on_difficulty_selected)
 	menu_quit_btn.pressed.connect(get_tree().quit)
@@ -99,6 +116,15 @@ func _process(delta: float) -> void:
 	if _run_started and not get_tree().paused:
 		_run_time_seconds += delta
 		_update_run_time_label()
+		_update_buff_hud()
+	if _shake_strength > 0.0:
+		camera.offset = Vector2(
+			randf_range(-_shake_strength, _shake_strength),
+			randf_range(-_shake_strength, _shake_strength)
+		)
+		_shake_strength = max(_shake_strength - 40.0 * delta, 0.0)
+	else:
+		camera.offset = camera.offset.lerp(Vector2.ZERO, min(delta * 18.0, 1.0))
 	fps_label.text = "FPS: %d" % Engine.get_frames_per_second()
 
 
@@ -128,14 +154,17 @@ func _restart_run() -> void:
 	_last_alive_count = 0
 	_run_game_over = false
 	_previous_level_summary = "New run. Survive the opening wave."
+	player.reset_run_upgrades()
 	_clear_projectiles()
 	player.reset_state(PLAYER_SPAWN, true)
 	_resume()
 	game_over_menu.visible = false
+	level_up_menu.visible = false
 	main_menu.visible = false
 	hud_root.visible = true
 	status_label.text = "Fresh run. Use walls to break line-of-sight."
 	hint_label.text = "Difficulty: %s   •   WASD Move   •   Mouse Aim   •   LMB / Space Shoot   •   Esc Pause" % difficulty.capitalize()
+	buff_label.text = "Buffs: None"
 	intro_panel.visible = false
 	spawner.clear_level()
 	_begin_level_transition(true)
@@ -148,6 +177,7 @@ func _show_main_menu() -> void:
 	hud_root.visible = false
 	pause_menu.visible = false
 	game_over_menu.visible = false
+	level_up_menu.visible = false
 	intro_panel.visible = false
 	spawner.clear_level()
 	_clear_projectiles()
@@ -256,11 +286,11 @@ func _animate_countdown_pulse(scale_strength: float = 1.1) -> void:
 	await tween.finished
 
 
-func _spawn_projectile(pos: Vector2, dir: Vector2, team: String, speed: float, is_boss: bool = false) -> void:
+func _spawn_projectile(pos: Vector2, dir: Vector2, team: String, speed: float, damage: int = 1, is_boss: bool = false, shot_style: String = "") -> void:
 	var projectile = _projectile_scene.instantiate()
 	projectile.global_position = pos
 	bullet_container.add_child(projectile)
-	projectile.init(dir, team, speed, 1, is_boss)
+	projectile.init(dir, team, speed, damage, is_boss, shot_style)
 
 
 func _clear_projectiles() -> void:
@@ -277,6 +307,18 @@ func _update_hud() -> void:
 	else:
 		enemies_label.text = "Enemies Left: %d" % _alive_enemies
 	_update_run_time_label()
+	_update_buff_hud()
+
+
+func _update_buff_hud() -> void:
+	var buffs: Array[String] = []
+	var inv_time: float = player.get_invincibility_remaining()
+	var gun_time: float = player.get_power_gun_remaining()
+	if inv_time > 0.05:
+		buffs.append("INV %.1fs" % inv_time)
+	if gun_time > 0.05:
+		buffs.append("GUN %.1fs" % gun_time)
+	buff_label.text = "Buffs: %s" % (" • ".join(buffs) if not buffs.is_empty() else "None")
 
 
 func _update_run_time_label() -> void:
@@ -302,11 +344,11 @@ func _on_player_bullet_fired(pos: Vector2, dir: Vector2) -> void:
 	if _wave_in_progress:
 		_level_shots_fired += 1
 		_run_shots_fired += 1
-	_spawn_projectile(pos, dir, "player", 760.0)
+	_spawn_projectile(pos, dir, "player", 760.0, 1, false, "player")
 
 
-func _on_enemy_shot(pos: Vector2, dir: Vector2, speed: float, is_boss: bool) -> void:
-	_spawn_projectile(pos, dir, "enemy", speed, is_boss)
+func _on_enemy_shot(pos: Vector2, dir: Vector2, speed: float, is_boss: bool, damage: int, shot_style: String) -> void:
+	_spawn_projectile(pos, dir, "enemy", speed, damage, is_boss, shot_style)
 
 
 func _on_player_hit_taken(remaining_hits: int) -> void:
@@ -317,6 +359,8 @@ func _on_player_hit_taken(remaining_hits: int) -> void:
 	_last_reported_hits = remaining_hits
 	lives_label.text = "Hits Left: %d" % remaining_hits
 	status_label.text = "You've been hit. Use the walls for cover."
+	_trigger_camera_shake(9.0)
+	_play_hit_flash(Color(1.0, 0.2, 0.2, 0.2), 0.09)
 
 
 func _on_player_died() -> void:
@@ -365,6 +409,13 @@ func _on_wave_cleared() -> void:
 	_wave_in_progress = false
 	_level += 1
 	status_label.text = "Wave cleared. Generating level %d..." % _level
+	if _is_boss_wave:
+		_slow_motion_brief(0.2, 0.18)
+		_trigger_camera_shake(12.0)
+	else:
+		_slow_motion_brief(0.5, 0.12)
+	if _level % 2 == 0:
+		await _present_level_reward_choice()
 	_start_next_level()
 
 
@@ -372,13 +423,18 @@ func _on_powerup_collected(kind: String) -> void:
 	match kind:
 		"heal":
 			status_label.text = "Full repair collected. Hits fully restored."
+			_show_floating_text("+HEAL", Color("#2ecc71"))
 		"invincible":
 			status_label.text = "Shield pickup active. You're invincible for a short time."
+			_show_floating_text("INVINCIBLE", Color("#f1c40f"))
 		"power_gun":
 			status_label.text = "Weapon upgrade active. Triple-shot enabled."
+			_show_floating_text("GUN UP", Color("#5dade2"))
 		_:
 			status_label.text = "Power-up collected."
 	_run_pickups_collected += 1
+	_trigger_camera_shake(6.0)
+	_play_hit_flash(Color(0.85, 0.95, 1.0, 0.12), 0.07)
 	_update_hud()
 
 
@@ -414,3 +470,62 @@ func _show_game_over() -> void:
 	]
 	game_over_menu.visible = true
 	get_tree().paused = true
+
+
+func _trigger_camera_shake(amount: float) -> void:
+	_shake_strength = max(_shake_strength, amount)
+
+
+func _play_hit_flash(color: Color, duration_sec: float) -> void:
+	hit_flash.color = color
+	hit_flash.visible = true
+	hit_flash.modulate.a = color.a
+	var tween := create_tween()
+	tween.tween_property(hit_flash, "modulate:a", 0.0, duration_sec)
+	await tween.finished
+	hit_flash.visible = false
+
+
+func _show_floating_text(text_value: String, color: Color) -> void:
+	var label := Label.new()
+	label.text = text_value
+	label.modulate = color
+	label.add_theme_font_size_override("font_size", 24)
+	label.position = player.global_position + Vector2(-38.0, -42.0)
+	float_text_layer.add_child(label)
+
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_SINE)
+	tween.set_ease(Tween.EASE_OUT)
+	tween.tween_property(label, "position:y", label.position.y - 36.0, 0.55)
+	tween.parallel().tween_property(label, "modulate:a", 0.0, 0.55)
+	tween.finished.connect(label.queue_free)
+
+
+func _slow_motion_brief(scale: float, duration_sec: float) -> void:
+	if _slowmo_running:
+		return
+	_slowmo_running = true
+	Engine.time_scale = clamp(scale, 0.1, 1.0)
+	await get_tree().create_timer(duration_sec, true, true).timeout
+	Engine.time_scale = 1.0
+	_slowmo_running = false
+
+
+func _present_level_reward_choice() -> void:
+	level_up_title.text = "LEVEL %d COMPLETE" % (_level - 1)
+	reward_info.text = "Choose one reward for the next wave"
+	level_up_menu.visible = true
+	get_tree().paused = true
+
+	var reward: String = await level_reward_selected
+	get_tree().paused = false
+	level_up_menu.visible = false
+
+	var message: String = str(player.apply_level_reward(reward))
+	status_label.text = message
+	_show_floating_text("LEVEL UP", Color("#f7dc6f"))
+
+
+func _choose_level_reward(reward: String) -> void:
+	level_reward_selected.emit(reward)

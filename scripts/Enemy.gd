@@ -2,7 +2,7 @@ extends CharacterBody2D
 
 ## Enemy.gd — Regular enemies and boss behavior with wall-aware movement and shooting.
 
-signal shoot_requested(pos: Vector2, dir: Vector2, speed: float, is_boss: bool)
+signal shoot_requested(pos: Vector2, dir: Vector2, speed: float, is_boss: bool, damage: int, shot_style: String)
 signal health_changed(current_health: int, max_health: int, is_boss: bool)
 signal defeated(enemy: CharacterBody2D)
 
@@ -21,15 +21,20 @@ var _strafe_sign: float = 1.0
 var _time_alive: float = 0.0
 var _facing: Vector2 = Vector2.LEFT
 var _radius: float = 16.0
+var _enemy_type: String = "standard"
+var _projectile_speed: float = 320.0
+var _shot_damage: int = 1
+var _shot_style: String = "enemy_normal"
 
 
 func _ready() -> void:
 	add_to_group("enemy")
 
 
-func setup(target: CharacterBody2D, boss_mode: bool, level: int, difficulty_profile: Dictionary = {}) -> void:
+func setup(target: CharacterBody2D, boss_mode: bool, level: int, difficulty_profile: Dictionary = {}, enemy_type: String = "standard") -> void:
 	_target = target
 	_is_boss = boss_mode
+	_enemy_type = enemy_type
 	_strafe_sign = -1.0 if randi() % 2 == 0 else 1.0
 
 	var health_mult: float = difficulty_profile.get("health_mult", 1.0)
@@ -44,14 +49,42 @@ func setup(target: CharacterBody2D, boss_mode: bool, level: int, difficulty_prof
 		fire_interval = 0.65 * fire_interval_mult
 		desired_distance = 320.0
 		_radius = 30.0
+		_projectile_speed = 440.0
+		_shot_damage = 1
+		_shot_style = "enemy_boss"
 	else:
-		var base_health: int = 2 + int(level / 3)
-		_max_health = maxi(1, int(round(base_health * health_mult)))
-		_health = _max_health
-		move_speed = (105.0 + level * 4.0) * speed_mult
-		fire_interval = max(0.52, (1.5 - level * 0.05) * fire_interval_mult)
-		desired_distance = 220.0 + float(level % 3) * 18.0
-		_radius = 16.0
+		match _enemy_type:
+			"sniper":
+				_max_health = maxi(1, int(round((1 + int(level / 4)) * health_mult)))
+				_health = _max_health
+				move_speed = (82.0 + level * 2.3) * speed_mult
+				fire_interval = max(0.7, (2.25 - level * 0.04) * fire_interval_mult)
+				desired_distance = 410.0
+				_radius = 15.0
+				_projectile_speed = 690.0
+				_shot_damage = 1
+				_shot_style = "enemy_sniper"
+			"rpg":
+				_max_health = maxi(1, int(round((3 + int(level / 4)) * health_mult)))
+				_health = _max_health
+				move_speed = (78.0 + level * 2.0) * speed_mult
+				fire_interval = max(1.0, (2.6 - level * 0.05) * fire_interval_mult)
+				desired_distance = 300.0
+				_radius = 19.0
+				_projectile_speed = 250.0
+				_shot_damage = 2
+				_shot_style = "enemy_rpg"
+			_:
+				var base_health: int = 2 + int(level / 3)
+				_max_health = maxi(1, int(round(base_health * health_mult)))
+				_health = _max_health
+				move_speed = (105.0 + level * 4.0) * speed_mult
+				fire_interval = max(0.52, (1.5 - level * 0.05) * fire_interval_mult)
+				desired_distance = 220.0 + float(level % 3) * 18.0
+				_radius = 16.0
+				_projectile_speed = 320.0
+				_shot_damage = 1
+				_shot_style = "enemy_normal"
 
 	var circle := CircleShape2D.new()
 	circle.radius = _radius
@@ -125,9 +158,11 @@ func _shoot() -> void:
 	var muzzle := global_position + _facing * (_radius + 10.0)
 	if _is_boss:
 		for angle in [-0.24, 0.0, 0.24]:
-			shoot_requested.emit(muzzle, _facing.rotated(angle), 440.0, true)
+			shoot_requested.emit(muzzle, _facing.rotated(angle), _projectile_speed, true, _shot_damage, _shot_style)
+	elif _enemy_type == "rpg":
+		shoot_requested.emit(muzzle, _facing, _projectile_speed, false, _shot_damage, _shot_style)
 	else:
-		shoot_requested.emit(muzzle, _facing, 320.0, false)
+		shoot_requested.emit(muzzle, _facing, _projectile_speed, false, _shot_damage, _shot_style)
 
 
 func _has_line_of_sight() -> bool:
@@ -146,14 +181,25 @@ func _draw() -> void:
 	if _is_boss:
 		body_color = Color("#8e44ad")
 		core_color = Color("#5e3370")
+	elif _enemy_type == "sniper":
+		body_color = Color("#00bcd4")
+		core_color = Color("#0c7d8a")
+	elif _enemy_type == "rpg":
+		body_color = Color("#f39c12")
+		core_color = Color("#a96507")
 
 	draw_circle(Vector2(4, 5), _radius, Color(0, 0, 0, 0.24))
 	draw_circle(Vector2.ZERO, _radius, body_color)
 	draw_circle(Vector2.ZERO, _radius * 0.62, core_color)
 	draw_circle(Vector2(-_radius * 0.28, -_radius * 0.3), _radius * 0.18, Color(1, 1, 1, 0.35))
 	var tip := _facing * (_radius + 12.0)
-	draw_line(Vector2.ZERO, tip, Color("#ecf0f1"), 5.0 if _is_boss else 4.0, false)
+	draw_line(Vector2.ZERO, tip, Color("#ecf0f1"), 5.0 if _is_boss else (5.0 if _enemy_type == "rpg" else 4.0), false)
 	draw_circle(tip, 4.0 if _is_boss else 3.0, Color("#bdc3c7"))
+
+	if _enemy_type == "sniper" and not _is_boss:
+		draw_line(Vector2.ZERO, tip * 0.9, Color(0.7, 0.95, 1.0, 0.45), 1.5, false)
+	if _enemy_type == "rpg" and not _is_boss:
+		draw_circle(tip * 0.88, 4.8, Color("#ffcf6a"))
 
 	if _is_boss:
 		var bar_width := 68.0

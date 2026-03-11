@@ -25,6 +25,10 @@ This repo demonstrates practical gameplay engineering in Godot:
 - ✅ UI polish pass (structured top bar, bottom hint bar, animated wave transitions)
 - ✅ Pickup VFX polish (animated rings, distinct item shapes, collection burst)
 - ✅ Main menu with start flow, difficulty selection (Easy/Normal/Hard), and power-up guide
+- ✅ Enemy variants (standard, sniper, RPG) with unique projectile behavior
+- ✅ Active buff timers in HUD (invincibility and gun upgrade)
+- ✅ Level-up reward choice screen every 2 levels (iconized options)
+- ✅ Extra game feel polish (camera shake, pickup float text, hit flash, brief slow-mo on clears)
 - ✅ Runs on Godot 4.6.x (project originally created on 4.3)
 
 ## Project Structure
@@ -55,6 +59,7 @@ godot/
 - Choose **Easy / Normal / Hard** from the main menu before starting a run
 - Player has **3 hits** per run
 - Enemies scale with level
+- Enemy variety appears as runs progress (**standard**, **sniper**, **RPG**)
 - Every **5th level** is a **boss wave**
 - Some levels include collectible power-ups:
     - **Full Heal** (restores hits to max)
@@ -64,6 +69,10 @@ godot/
     - **LEVEL X**
     - **Starting in 3..2..1..GO**
     - **Previous level recap** (clear time, enemy count, shots fired, hits taken)
+- Every 2 levels you choose 1 **level-up reward**:
+    - **⚡ Mobility Boost** (+move speed)
+    - **🔥 Trigger Tuning** (+fire rate)
+    - **🛡 Fortify** (+1 max hit)
 
 ## Technical Notes
 
@@ -87,6 +96,5 @@ godot/
 
 ## Next Planned Improvements
 
-- Start menu and run summary screen
 - Basic audio pass (SFX + music)
 - Optional score persistence/high-score table
