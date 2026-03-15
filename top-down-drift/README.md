@@ -103,4 +103,4 @@ Useful inspector values on the player include:
 
 - The car visuals are built from Godot shapes rather than imported sprites.
 - The track is also generated from code rather than hand-drawn tiles.
-- The current circuit uses square corners. If you want a more natural driving line, the next improvement is to convert those corners to proper curved geometry and matching paint.
+- The current circuit uses square corners. 
