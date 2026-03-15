@@ -81,24 +81,82 @@ func _corner(center: Vector2, from_dir: int, to_dir: int) -> void:
 	var dir_vecs: Array[Vector2] = [Vector2.RIGHT, Vector2.UP, Vector2.LEFT, Vector2.DOWN]
 	var arrive: Vector2 = dir_vecs[from_dir]
 	var depart: Vector2 = dir_vecs[to_dir]
-	var inside: Vector2 = -(arrive + depart).normalized()
+	var pivot: Vector2 = center
+	var outer_r := ROAD_WIDTH * 0.5
+	var a_start: float = (-depart).angle() - PI * 0.5
+	var a_end: float = (-arrive).angle() - PI * 0.5
+	var sweep: float = fmod(a_end - a_start + TAU, TAU)
+	if sweep > PI:
+		sweep -= TAU
 
-	_road_rect(center, Vector2(ROAD_WIDTH, ROAD_WIDTH))
+	var road_arc: PackedVector2Array = PackedVector2Array()
+	var wall_inner_arc: PackedVector2Array = PackedVector2Array()
+	var wall_outer_arc: PackedVector2Array = PackedVector2Array()
+	var edge_arc: PackedVector2Array = PackedVector2Array()
+	var center_arc: PackedVector2Array = PackedVector2Array()
+	var arc_steps := 14
+	for i in range(arc_steps + 1):
+		var t := float(i) / float(arc_steps)
+		var a := a_start + sweep * t
+		var dir := Vector2(cos(a), sin(a))
+		road_arc.append(pivot + dir * outer_r)
+		wall_inner_arc.append(pivot + dir * outer_r)
+		wall_outer_arc.append(pivot + dir * (outer_r + WALL_THICKNESS))
+		edge_arc.append(pivot + dir * (outer_r - 10.0))
+		center_arc.append(pivot + dir * (outer_r * 0.5))
+
+	var road_poly := Polygon2D.new()
+	var road_points := PackedVector2Array([pivot])
+	road_points.append_array(road_arc)
+	road_poly.polygon = road_points
+	road_poly.color = ROAD_COLOR
+	road_poly.z_index = Z_ROAD
+	add_child(road_poly)
+
+	var edge_line := Line2D.new()
+	edge_line.width = 6.0
+	edge_line.default_color = EDGE_COLOR
+	edge_line.z_index = Z_MARK
+	edge_line.points = edge_arc
+	add_child(edge_line)
+
+	var center_line := Line2D.new()
+	center_line.width = 5.0
+	center_line.default_color = CENTER_COLOR
+	center_line.z_index = Z_MARK
+	center_line.points = center_arc
+	add_child(center_line)
+
+	var wall_points := PackedVector2Array()
+	wall_points.append_array(wall_outer_arc)
+	for i in range(wall_inner_arc.size() - 1, -1, -1):
+		wall_points.append(wall_inner_arc[i])
+
+	var wall_body := StaticBody2D.new()
+	wall_body.collision_layer = 2
+	wall_body.collision_mask = 0
+	wall_body.z_index = Z_WALL
+	add_child(wall_body)
+
+	var wall_shadow := Polygon2D.new()
+	var shadow_points := PackedVector2Array()
+	for p in wall_points:
+		shadow_points.append(p + Vector2(8, 8))
+	wall_shadow.polygon = shadow_points
+	wall_shadow.color = Color(0.02, 0.02, 0.02, 0.34)
+	wall_shadow.z_index = -1
+	wall_body.add_child(wall_shadow)
+
+	var wall_col := CollisionPolygon2D.new()
+	wall_col.polygon = wall_points
+	wall_body.add_child(wall_col)
+
+	var wall_vis := Polygon2D.new()
+	wall_vis.polygon = wall_points
+	wall_vis.color = WALL_COLOR
+	wall_body.add_child(wall_vis)
+
 	_physics_zone("asphalt", center, Vector2(ROAD_WIDTH, ROAD_WIDTH))
-
-	var join_offset: Vector2 = (arrive + depart) * (ROAD_WIDTH * 0.5 + WALL_THICKNESS * 0.5)
-	_wall(center + join_offset, Vector2(WALL_THICKNESS, WALL_THICKNESS))
-
-	var inner_fill := Polygon2D.new()
-	var inner_tip: Vector2 = center + inside * (ROAD_WIDTH * 0.5)
-	inner_fill.polygon = PackedVector2Array([
-		inner_tip,
-		inner_tip - arrive * (ROAD_WIDTH * 0.5),
-		inner_tip - depart * (ROAD_WIDTH * 0.5)
-	])
-	inner_fill.color = ROAD_COLOR
-	inner_fill.z_index = Z_ROAD
-	add_child(inner_fill)
 
 
 func _add_track_markings(pos: Vector2, size: Vector2, horizontal: bool) -> void:
@@ -133,11 +191,12 @@ func _strip(pos: Vector2, size: Vector2, color: Color) -> void:
 	_rect_poly(pos, size, color, Z_MARK)
 
 
-func _wall(pos: Vector2, size: Vector2) -> void:
+func _wall(pos: Vector2, size: Vector2, rot: float = 0.0) -> void:
 	var body := StaticBody2D.new()
 	body.collision_layer = 2
 	body.collision_mask = 0
 	body.position = pos
+	body.rotation = rot
 	body.z_index = Z_WALL
 	add_child(body)
 

@@ -155,18 +155,6 @@ scale_amount_min = 2.0
 scale_amount_max = 7.2
 color = Color(0.86, 0.86, 0.86, 0.52)
 
-[node name="EngineAudio" type="AudioStreamPlayer" parent="."]
-volume_db = -8.0
-bus = &"Master"
-
-[node name="TireAudio" type="AudioStreamPlayer" parent="."]
-volume_db = -18.0
-bus = &"Master"
-
-[node name="ImpactAudio" type="AudioStreamPlayer" parent="."]
-volume_db = -18.0
-bus = &"Master"
-
 [node name="Camera2D" type="Camera2D" parent="."]
 enabled = true
 position = Vector2(0, 0)

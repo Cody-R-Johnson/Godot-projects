@@ -39,7 +39,6 @@ const SKID_MAX_PTS := 200
 const WHEEL_REAR_DIST := 16.0
 const WHEEL_SIDE_DIST := 10.0
 
-const AUDIO_MIX_RATE := 22050.0
 const SURFACE_PRIORITY := ["oil", "paint", "dirt", "asphalt", "grass"]
 const SURFACE_PRESETS := {
 	"asphalt": {
@@ -107,9 +106,6 @@ var best_combo_this_run: int = 1
 @onready var _smoke_r: CPUParticles2D = $SmokeRight
 @onready var _wheel_fl: Node2D = $FrontWheelLeft
 @onready var _wheel_fr: Node2D = $FrontWheelRight
-@onready var _engine_audio: AudioStreamPlayer = $EngineAudio
-@onready var _tire_audio: AudioStreamPlayer = $TireAudio
-@onready var _impact_audio: AudioStreamPlayer = $ImpactAudio
 
 var _surface_counts: Dictionary = {}
 var _skid_root: Node2D
@@ -120,21 +116,8 @@ var _prev_right: Vector2
 var _score_bank: float = 0.0
 var _combo_grace_left: float = 0.0
 var _last_speed: float = 0.0
-var _last_throttle: float = 0.0
 var _last_steer: float = 0.0
 var _last_lateral_slip: float = 0.0
-var _impact_pulse: float = 0.0
-
-var _engine_playback: AudioStreamGeneratorPlayback
-var _tire_playback: AudioStreamGeneratorPlayback
-var _impact_playback: AudioStreamGeneratorPlayback
-var _engine_phase_1: float = 0.0
-var _engine_phase_2: float = 0.0
-var _engine_phase_3: float = 0.0
-var _tire_phase_1: float = 0.0
-var _tire_phase_2: float = 0.0
-var _tire_grain_state: float = 0.0
-var _tire_lowpass_state: float = 0.0
 
 
 func _ready() -> void:
@@ -142,7 +125,6 @@ func _ready() -> void:
 	add_to_group("player")
 	_skid_root = get_parent().get_node_or_null("SkidMarks") as Node2D
 	_start_new_skid_segment()
-	_setup_audio()
 	_apply_surface_visuals()
 
 
@@ -157,7 +139,6 @@ func _physics_process(delta: float) -> void:
 	var drift_traction_mult := float(surface["drift_traction_mult"])
 	var drag_mult := float(surface["drag_mult"])
 
-	_last_throttle = throttle
 	_last_steer = steer
 	if section_active:
 		section_elapsed += delta
@@ -206,11 +187,6 @@ func _physics_process(delta: float) -> void:
 	_last_speed = velocity.length()
 	_update_scoring(delta)
 	_update_skid_marks()
-
-
-func _process(_delta: float) -> void:
-	_fill_audio_buffers()
-
 
 func start_challenge_section() -> void:
 	section_active = true
@@ -308,7 +284,6 @@ func _handle_collisions(pre_move_speed: float) -> void:
 	if pre_move_speed < 140.0:
 		return
 	_break_combo(true)
-	_impact_pulse = maxf(_impact_pulse, clampf(pre_move_speed / 500.0, 0.0, 1.0))
 
 
 func _update_wheel_visuals(steer_input: float, delta: float) -> void:
@@ -384,64 +359,3 @@ func _fade_and_cleanup_line(line: Line2D) -> void:
 	)
 
 
-func _setup_audio() -> void:
-	_engine_playback = _configure_audio_player(_engine_audio)
-	_tire_playback = _configure_audio_player(_tire_audio)
-	_impact_playback = _configure_audio_player(_impact_audio)
-
-
-func _configure_audio_player(player: AudioStreamPlayer) -> AudioStreamGeneratorPlayback:
-	var stream := AudioStreamGenerator.new()
-	stream.mix_rate = AUDIO_MIX_RATE
-	stream.buffer_length = 0.12
-	player.stream = stream
-	player.play()
-	return player.get_stream_playback() as AudioStreamGeneratorPlayback
-
-
-func _fill_audio_buffers() -> void:
-	_fill_engine_audio()
-	_fill_tire_audio()
-	_fill_impact_audio()
-
-
-func _fill_engine_audio() -> void:
-	if _engine_playback == null:
-		return
-	var load := clampf((_last_speed / max_speed) * 0.75 + maxf(_last_throttle, 0.0) * 0.45, 0.0, 1.0)
-	var target_freq := 28.0 + (_last_speed * 0.12) + maxf(_last_throttle, 0.0) * 18.0
-	var loudness := clampf(0.07 + load * 0.34, 0.05, 0.42)
-	_engine_audio.volume_db = linear_to_db(maxf(0.01, loudness)) - 13.0
-	var frames := _engine_playback.get_frames_available()
-	for _i in range(frames):
-		_engine_phase_1 = wrapf(_engine_phase_1 + TAU * target_freq / AUDIO_MIX_RATE, 0.0, TAU)
-		_engine_phase_2 = wrapf(_engine_phase_2 + TAU * target_freq * 1.02 / AUDIO_MIX_RATE, 0.0, TAU)
-		_engine_phase_3 = wrapf(_engine_phase_3 + TAU * target_freq * 2.01 / AUDIO_MIX_RATE, 0.0, TAU)
-		var fundamental := sin(_engine_phase_1)
-		var pulse := signf(sin(_engine_phase_2)) * 0.11
-		var upper := sin(_engine_phase_3) * 0.045
-		var sample := fundamental * 0.15 + pulse + upper
-		sample *= 0.8 + 0.2 * sin(_engine_phase_1 * 0.25)
-		_engine_playback.push_frame(Vector2(sample, sample))
-
-
-func _fill_tire_audio() -> void:
-	if _tire_playback == null:
-		return
-	_tire_audio.volume_db = -80.0
-	var frames := _tire_playback.get_frames_available()
-	for _i in range(frames):
-		_tire_playback.push_frame(Vector2.ZERO)
-
-
-func _fill_impact_audio() -> void:
-	if _impact_playback == null:
-		return
-	var frames := _impact_playback.get_frames_available()
-	for _i in range(frames):
-		var sample := 0.0
-		if _impact_pulse > 0.001:
-			sample = (randf() * 2.0 - 1.0) * _impact_pulse * 0.35
-			_impact_pulse = maxf(0.0, _impact_pulse - 0.0025)
-		_impact_playback.push_frame(Vector2(sample, sample))
-	_impact_audio.volume_db = linear_to_db(maxf(0.01, _impact_pulse + 0.01)) - 6.0 if _impact_pulse > 0.01 else -80.0

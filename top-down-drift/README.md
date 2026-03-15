@@ -35,9 +35,9 @@ The current track is generated at runtime in code.
 
 - A 3000 x 3000 grass field forms the background.
 - Concrete outer walls enclose the play area.
-- A rectangular asphalt circuit sits inside the arena.
+- A rectangular asphalt circuit with curved corner transitions sits inside the arena.
 - White edge lines and yellow dashed center lines mark the straights.
-- Square corner joins connect the straight wall sections.
+- Curved corner walls connect the straight wall sections.
 - Surface zones switch the car between asphalt and grass behavior.
 
 ## HUD
@@ -74,7 +74,7 @@ top-down-drift/
 
 ## Main Scripts
 
-- `scripts/player.gd`: car physics, drifting, skid marks, smoke, surface handling, scoring, and procedural audio.
+- `scripts/player.gd`: car physics, drifting, skid marks, smoke, surface handling, and scoring.
 - `scripts/track.gd`: builds the rectangular circuit, walls, gates, road markings, and surface zones at startup.
 - `scripts/main.gd`: updates the HUD, best-run stats, and result text.
 
@@ -103,4 +103,5 @@ Useful inspector values on the player include:
 
 - The car visuals are built from Godot shapes rather than imported sprites.
 - The track is also generated from code rather than hand-drawn tiles.
-- The current circuit uses square corners. 
+- The current circuit uses curved corners.
+- Engine and tire audio are currently disabled.
