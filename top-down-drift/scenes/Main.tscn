@@ -14,17 +14,66 @@ z_index = -1
 z_index = -2
 script = ExtResource("2_track")
 
-[node name="Road" type="ColorRect" parent="Track"]
-offset_left = -1520.0
-offset_top = -1520.0
-offset_right = 1520.0
-offset_bottom = 1520.0
-color = Color(0.16, 0.16, 0.16, 1)
-
 [node name="Player" parent="." instance=ExtResource("3_player")]
-position = Vector2(0, 200)
+position = Vector2(-880, 1000)
+rotation = 0.0
 
 [node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="SectionStatusLabel" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 18.0
+offset_right = 420.0
+offset_bottom = 48.0
+text = "Cross the green gate to start a scored run"
+theme_override_font_sizes/font_size = 22
+
+[node name="TimerLabel" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 52.0
+offset_right = 260.0
+offset_bottom = 82.0
+text = "Best time --"
+theme_override_font_sizes/font_size = 20
+
+[node name="ScoreLabel" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 84.0
+offset_right = 420.0
+offset_bottom = 114.0
+text = "Section 0   Total 0   Best 0"
+theme_override_font_sizes/font_size = 20
+
+[node name="ComboLabel" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 116.0
+offset_right = 260.0
+offset_bottom = 146.0
+text = "Combo x1"
+theme_override_font_sizes/font_size = 20
+
+[node name="SurfaceLabel" type="Label" parent="HUD"]
+offset_left = 20.0
+offset_top = 148.0
+offset_right = 260.0
+offset_bottom = 178.0
+text = "Surface: Asphalt"
+theme_override_font_sizes/font_size = 18
+
+[node name="ResultLabel" type="Label" parent="HUD"]
+visible = false
+anchor_left = 0.5
+anchor_top = 0.08
+anchor_right = 0.5
+anchor_bottom = 0.08
+offset_left = -280.0
+offset_top = 0.0
+offset_right = 280.0
+offset_bottom = 40.0
+text = "Run started"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.95, 0.94, 0.82, 1)
 
 [node name="SpeedLabel" type="Label" parent="HUD"]
 anchor_left = 1.0
@@ -35,7 +84,7 @@ offset_left = -180.0
 offset_top = -64.0
 offset_right = -20.0
 offset_bottom = -20.0
-text = "0 km/h"
+text = "0 mph"
 horizontal_alignment = 2
 vertical_alignment = 1
 theme_override_font_sizes/font_size = 26
