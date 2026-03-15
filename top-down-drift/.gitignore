@@ -1,0 +1,16 @@
+# Godot build outputs
+.godot/
+
+# Editor metadata
+*.import
+*.translation
+
+# Export templates
+export_presets.cfg
+*.pck
+*.zip
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
